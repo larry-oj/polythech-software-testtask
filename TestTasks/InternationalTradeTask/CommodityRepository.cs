@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using TestTasks.InternationalTradeTask.Models;
 
 namespace TestTasks.InternationalTradeTask
@@ -8,12 +9,57 @@ namespace TestTasks.InternationalTradeTask
     {
         public double GetImportTariff(string commodityName)
         {
-            throw new NotImplementedException();
+            var commodityGroup = FindCommodityGroup(commodityName);
+            if (commodityGroup == null)
+                throw new ArgumentException($"Commodity \'{commodityName}\' not found.");
+
+            return GetTariff(commodityGroup, cg => cg.ImportTarif);
         }
 
         public double GetExportTariff(string commodityName)
         {
-            throw new NotImplementedException();
+            var commodityGroup = FindCommodityGroup(commodityName);
+            if (commodityGroup == null)
+                throw new ArgumentException($"Commodity \'{commodityName}\' not found.");
+
+            return GetTariff(commodityGroup, cg => cg.ExportTarif);
+        }
+
+        private ICommodityGroup FindCommodityGroup(string commodityName)
+        {
+            return _allCommodityGroups
+                .Select(group => FindCommodityRecursive(group, commodityName))
+                .FirstOrDefault(found => found != null);
+        }
+
+        private ICommodityGroup FindCommodityRecursive(ICommodityGroup group, string commodityName)
+        {
+            if (group.Name.Equals(commodityName, StringComparison.OrdinalIgnoreCase))
+                return group;
+
+            foreach (var subgroup in group.SubGroups ?? Array.Empty<ICommodityGroup>())
+            {
+                var found = FindCommodityRecursive(subgroup, commodityName);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        private double GetTariff(ICommodityGroup commodityGroup, Func<ICommodityGroup, double?> tariffSelector)
+        {
+            var current = commodityGroup;
+            while (current != null)
+            {
+                var tariff = tariffSelector(current);
+                if (tariff.HasValue)
+                    return tariff.Value;
+
+                current = _allCommodityGroups.FirstOrDefault(g => g.SubGroups?.Contains(current) == true);
+            }
+
+            return default;
         }
 
         private FullySpecifiedCommodityGroup[] _allCommodityGroups = new FullySpecifiedCommodityGroup[]
