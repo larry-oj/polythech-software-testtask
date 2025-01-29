@@ -8,7 +8,19 @@ namespace TestTasks.VowelCounting
     {
         public (char symbol, int count)[] GetCharCount(string veryLongString, char[] countedChars)
         {
-            throw new NotImplementedException();
+            var map = new Dictionary<char, int>();
+            
+            foreach (var @char in countedChars)
+            {
+                map[@char] = 0;
+            }
+            
+            foreach (var @char in veryLongString.Where(@char => map.ContainsKey(@char)))
+            {
+                map[@char]++;
+            }
+            
+            return countedChars.Select(c => (c, map[c])).ToArray();
         }
     }
 }
